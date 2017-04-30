@@ -1,5 +1,5 @@
 import sqlalchemy as sa
-from tensorlab.core.attributes import AttributeType, AttributeTarget
+from tensorlab.core.attributeoptions import AttributeType, AttributeTarget
 
 
 _metadata = sa.MetaData()

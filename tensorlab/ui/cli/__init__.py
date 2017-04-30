@@ -8,14 +8,14 @@ def main():
     if args.root is None:
         args.root = config.infer_tensorlab_root()
     if args.root is None:
-        if args.command_section == 'init':
+        if args.command == 'init':
             args.root = config.get_default_tensorlab_root()
         else:
             print("ERROR: cannot find a TensorLab root neither in current directory "
                   "nor in any parent directory, and TENSORLAB variable is not set. "
                   "Please, change into correct directory or specify the path.")
             return 1
-    command = COMMANDS[args.command_section]
+    command = COMMANDS[args.command]
     try:
         command(args)
     except exceptions.TensorLabError as err:

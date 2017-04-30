@@ -1,4 +1,5 @@
 from tensorlab.storage import TensorLabStorage
+from . import groups
 
 
 def init(args):
@@ -14,4 +15,5 @@ def show(args):
 COMMANDS = {
     'init': init,
     'show': show,
+    'group': groups.interpret,
 }

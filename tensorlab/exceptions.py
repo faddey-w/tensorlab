@@ -9,3 +9,11 @@ class TensorLabError(Exception):
 
 class StorageInstantiationError(TensorLabError):
     pass
+
+
+class InvalidStateError(TensorLabError):
+    pass
+
+
+class LookupError(TensorLabError):
+    pass

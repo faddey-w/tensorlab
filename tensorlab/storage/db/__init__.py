@@ -1,1 +1,1 @@
-from . import schema, connection
+from . import tables, connection

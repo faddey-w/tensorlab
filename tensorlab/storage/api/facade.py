@@ -1,5 +1,6 @@
-from .. import files, db
 from tensorlab import exceptions
+from .. import files, db
+from .groups_storage import GroupsStorage
 
 
 class TensorLabStorage:
@@ -7,6 +8,7 @@ class TensorLabStorage:
     def __init__(self, root_dir):
         self._root = root_dir
         self._db = None
+        self.groups = None  # type: GroupsStorage
 
     @property
     def is_opened(self):
@@ -35,8 +37,9 @@ class TensorLabStorage:
         return self
 
     def _do_init(self):
-        db.connection.init_db(files.get_db_path(self._root))
-        self._db = db.connection.get_connection()
+        self._db = db.connection.init_db_engine(files.get_db_path(self._root))
+        db.tables.initialize_db(self._db)
+        self.groups = GroupsStorage(self._db)
 
 
 def _error(msg, *args, **kwargs):
