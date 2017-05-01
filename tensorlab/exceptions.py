@@ -3,8 +3,12 @@
 class TensorLabError(Exception):
 
     def __init__(self, message, *args):
-        super(TensorLabError, self).__init__(message, *args)
+        super(TensorLabError, self).__init__(*args)
         self.message = message
+
+
+class InternalError(TensorLabError):
+    pass
 
 
 class StorageInstantiationError(TensorLabError):
@@ -16,4 +20,8 @@ class InvalidStateError(TensorLabError):
 
 
 class LookupError(TensorLabError):
+    pass
+
+
+class IllegalArgumentError(TensorLabError):
     pass

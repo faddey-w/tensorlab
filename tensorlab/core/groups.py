@@ -25,9 +25,6 @@ class GroupsStorage:
     def list_models(self, group):
         raise NotImplementedError
 
-    def count_models(self, group):
-        return len(self.list_models(group))
-
     def list_attrs(self, group):
         raise NotImplementedError
 
@@ -37,8 +34,20 @@ class GroupsStorage:
     def delete_attrs(self, group, attribute, *more_attributes):
         raise NotImplementedError
 
+    def n_attribute_usages(self, group, attribute):
+        raise NotImplementedError
+
     def get_group(self, attribute):
         raise NotImplementedError
+
+    def count_models(self, group):
+        return len(self.list_models(group))
+
+    def count_instances(self, group):
+        return sum(
+            model.count_instances()
+            for model in self.list_models(group)
+        )
 
 
 class Group:
@@ -89,7 +98,23 @@ class Group:
                 )
             self.storage.delete_attrs(self, *attrs_to_delete.values())
         if attrs or kwattrs:
-            self.storage.add_or_update_attrs(self, *attrs, *kwattrs.values())
+            attrs = [*attrs, *kwattrs.values()]
+            if any(a.target == AttributeTarget.Model
+                   and not a.default and not a.key and not a.nullable
+                   for a in attrs):
+                if self.storage.count_models(self) > 0:
+                    raise exceptions.IllegalArgumentError(
+                        "You try to add new model attributes without "
+                        "default value specified while some models already exist")
+            if any(a.target == AttributeTarget.Instance
+                   and not a.default and not a.key and not a.nullable
+                   for a in attrs):
+                if self.storage.count_instances(self) > 0:
+                    raise exceptions.IllegalArgumentError(
+                        "You try to add new instance attributes without "
+                        "default value specified while some instances already exist")
+            self.storage.add_or_update_attrs(self, *attrs)
+            return attrs
 
     def delete(self, force=False):
         if not force:
