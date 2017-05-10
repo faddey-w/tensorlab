@@ -28,14 +28,14 @@ def setup(commands):
     parser.set_defaults(
         attr_function=lambda args: subcmd_dict[args.attr_command])
 
-    return {'attr': lambda args: args.attr_function(args)}
+    return {'attr': lambda args: args.attr_function(args)(args)}
 
 
 def define_attr(args):
     storage = TensorLabStorage(args.root).Open()
 
-    group = storage.groups.get(args.group)
-    attr = group.get_attrs().get(args.name)
+    group = storage.groups.get(args.attr_spec.group)
+    attr = group.get_attrs().get(args.attr_spec.attr)
     action = 'update' if attr else 'create'
     if not attr:
         if not args.type:
@@ -44,7 +44,7 @@ def define_attr(args):
             raise exceptions.IllegalArgumentError("--target is required for new attributes")
         attr = Attribute(
             storage=storage.groups,
-            name=args.name,
+            name=args.attr_spec.attr,
             type=args.type,
             target=args.target,
             default=args.default,
@@ -59,6 +59,8 @@ def define_attr(args):
         if args.default:
             attr.default = args.default
         if args.options is not None:
+            if attr.type == AttributeType.Enum:
+                raise exceptions.IllegalArgumentError("Enumeration choices cannot be changed")
             attr.options = args.options
         if args.nullable is not None:
             attr.nullable = args.nullable
@@ -75,8 +77,8 @@ def define_attr(args):
 def remove_attr(args):
     storage = TensorLabStorage(args.root).Open()
 
-    group = storage.groups.get(args.group)
-    attr = group.get_attrs().get(args.name)
+    group = storage.groups.get(args.attr_spec.group)
+    attr = group.get_attrs().get(args.attr_spec.attr)
 
     [n_usages] = storage.groups.n_attribute_usages(group, attr)
     storage.groups.delete_attrs(group, attr)

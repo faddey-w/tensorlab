@@ -36,7 +36,7 @@ def setup(commands):
     parser.set_defaults(
         group_function=lambda args: subcmd_dict[args.group_command])
 
-    return {'group': lambda args: args.group_function(args)}
+    return {'group': lambda args: args.group_function(args)(args)}
 
 
 def create_group(args):
