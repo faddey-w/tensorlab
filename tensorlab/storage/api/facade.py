@@ -1,14 +1,18 @@
 from tensorlab import exceptions
 from .. import files
+from ..files.config import Config
 
 
 class TensorLabStorage:
 
-    def __init__(self, root_dir):
+    def __init__(self, root_dir, implementation=None):
         self._root = root_dir
         self._is_open = False
         self._db = None
+        self._config = Config(files.get_config_path(self._root))
+        self._config.load()
         self._groups = None
+        self._get_implementation = implementation or DefaultImplementation
 
     @property
     def is_opened(self):
@@ -19,9 +23,16 @@ class TensorLabStorage:
         return self._root
 
     @property
+    def config(self):
+        """
+        :rtype: tensorlab.storage.files.Config
+        """
+        return self._config
+
+    @property
     def groups(self):
         """
-        :rtype: tensorlab.storage.api.groups_storage.GroupsStorage
+        :rtype: tensorlab.core.groups.GroupsStorage
         """
         self._do_init()
         return self._groups
@@ -49,11 +60,19 @@ class TensorLabStorage:
         if self._db is None:
             if not self._is_open:
                 raise _error("Storage is not opened")
-            from .. import db
-            from .groups_storage import GroupsStorage
-            self._db = db.connection.init_db_engine(files.get_db_path(self._root))
-            db.tables.initialize_db(self._db)
-            self._groups = GroupsStorage(self._db, self)
+            impl = self._get_implementation(self, self._root)
+            self._db = impl.db
+            self._groups = impl.groups_storage
+
+
+class DefaultImplementation:
+
+    def __init__(self, storage, root_dir):
+        from .. import db, files
+        from .groups_storage import GroupsStorage
+        self.db = db.connection.init_db_engine(files.get_db_path(root_dir))
+        db.tables.initialize_db(self.db)
+        self.groups_storage = GroupsStorage(self.db, storage)
 
 
 def _error(msg, *args, **kwargs):

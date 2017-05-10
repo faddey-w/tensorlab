@@ -32,7 +32,14 @@ def init(args):
 
 def show(args):
     storage = TensorLabStorage(args.root).Open()
-    print('Found TensorLab at {}'.format(storage.root_dir))
+    print('TensorLab at {}'.format(storage.root_dir))
+    for key in storage.config.get_fields():
+        value = storage.config[key]
+        if value is None:
+            value = '(not set)'
+        else:
+            value = repr(value)
+        print('   {}: {}'.format(key, value))
 
 
 def destroy(args):
@@ -41,7 +48,10 @@ def destroy(args):
 
 
 def set_config(args):
-    raise NotImplementedError
+    storage = TensorLabStorage(args.root).Open()
+    storage.config[args.key] = args.value
+    storage.config.save()
+    print('Set "{}" to {!r}'.format(args.key, args.value))
 
 
 def run(args):

@@ -3,7 +3,7 @@ from . import _tools
 
 def setup(commands):
     parser = commands.add_parser('view')
-    subcommands = parser.add_subcommands(dest='view_command', title='Commands')
+    subcommands = parser.add_subparsers(dest='view_command', title='Commands')
 
     make_parser = subcommands.add_parser('make')
     make_parser.add_argument('name')

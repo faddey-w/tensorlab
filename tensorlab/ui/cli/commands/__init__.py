@@ -33,7 +33,7 @@ def check_root(args):
     if args.root is None:
         args.root = config.infer_tensorlab_root()
     if args.root is None:
-        if args.command == 'init':
+        if args.root_command == 'init':
             args.root = config.get_default_tensorlab_root()
         else:
             raise exceptions.StorageInstantiationError(
