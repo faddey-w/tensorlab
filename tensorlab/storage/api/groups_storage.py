@@ -1,11 +1,11 @@
 import sqlalchemy as sa
 from tensorlab import exceptions
 from tensorlab.core.attributeoptions import AttributeType
-from tensorlab.core.groups import GroupsStorage as _BaseGroupsStorage, Group, Attribute
+from tensorlab.core import groups
 from tensorlab.storage.db import tables as _t, utils
 
 
-class GroupsStorage(_BaseGroupsStorage):
+class GroupsStorage(groups.GroupsStorage):
 
     def __init__(self, db, storage):
         self._db = db
@@ -33,7 +33,7 @@ class GroupsStorage(_BaseGroupsStorage):
             ins_q = _t.Groups.insert().values(name=group.name)
             ret = self._db.execute(ins_q)
             group.key = _group_key_from_row({
-                'id': ret.inserted_primary_key,
+                'id': ret.inserted_primary_key[0],
                 'name': group.name,
             })
 
@@ -41,6 +41,22 @@ class GroupsStorage(_BaseGroupsStorage):
         if not group.key:
             raise exceptions.InvalidStateError("Group is not saved")
         attrs = [attribute, *more_attributes]
+
+        # apply integrity policy:
+        if any(a.target == groups.AttributeTarget.Model
+               and not a.default and not a.key and not a.nullable
+               for a in attrs):
+            if self.count_models(group) > 0:
+                raise exceptions.IllegalArgumentError(
+                    "You try to add new model attributes without "
+                    "default value specified while some models already exist")
+        if any(a.target == groups.AttributeTarget.Instance
+               and not a.default and not a.key and not a.nullable
+               for a in attrs):
+            if self.count_instances(group) > 0:
+                raise exceptions.IllegalArgumentError(
+                    "You try to add new instance attributes without "
+                    "default value specified while some instances already exist")
 
         illegal_attrs = [a for a in attrs if a.key and a.key['group_id'] != group.key['id']]
         if illegal_attrs:
@@ -78,7 +94,7 @@ class GroupsStorage(_BaseGroupsStorage):
             )
             ins_ret = self._db.execute(_t.Attributes.insert().values(**data))
             attr.key = {
-                'id': ins_ret.inserted_primary_key,
+                'id': ins_ret.inserted_primary_key[0],
                 'group_id': group.key['id'],
                 'orig_fields': _attr_args_from_row(data)
             }
@@ -102,7 +118,8 @@ class GroupsStorage(_BaseGroupsStorage):
         return self._row_to_group(row)
 
     def list_models(self, group):
-        return self._storage.models.list(group)
+        return []
+        # return self._storage.models.list(group)
 
     def list_attrs(self, group):
         return utils.read_many(
@@ -144,11 +161,11 @@ class GroupsStorage(_BaseGroupsStorage):
 
     def _row_to_group(self, row):
         key = _group_key_from_row(row)
-        return Group(key, self, **key['orig_fields'])
+        return groups.Group(key, self, **key['orig_fields'])
 
     def _row_to_attr(self, row):
         key = _attr_key_from_row(row)
-        return Attribute(key, self, **key['orig_fields'])
+        return groups.Attribute(key, self, **key['orig_fields'])
 
 
 def _group_args_from_row(row):

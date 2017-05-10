@@ -99,20 +99,6 @@ class Group:
             self.storage.delete_attrs(self, *attrs_to_delete.values())
         if attrs or kwattrs:
             attrs = [*attrs, *kwattrs.values()]
-            if any(a.target == AttributeTarget.Model
-                   and not a.default and not a.key and not a.nullable
-                   for a in attrs):
-                if self.storage.count_models(self) > 0:
-                    raise exceptions.IllegalArgumentError(
-                        "You try to add new model attributes without "
-                        "default value specified while some models already exist")
-            if any(a.target == AttributeTarget.Instance
-                   and not a.default and not a.key and not a.nullable
-                   for a in attrs):
-                if self.storage.count_instances(self) > 0:
-                    raise exceptions.IllegalArgumentError(
-                        "You try to add new instance attributes without "
-                        "default value specified while some instances already exist")
             self.storage.add_or_update_attrs(self, *attrs)
             return attrs
 
