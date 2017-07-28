@@ -16,7 +16,7 @@ class AttributeType(enum.Enum):
 
     def validate_options(self, options):
         if self == AttributeType.Integer:
-            return options in ('positive', 'negative')
+            return options in ('positive', 'negative', '')
         elif self == AttributeType.Enum:
             return all(map(str.isidentifier, options.split(';')))
         else:
@@ -34,23 +34,18 @@ class AttributeType(enum.Enum):
 
     def _encode_integer(self, value, options):
         int_value = _cast(value, int)
-        if int(value) != value:
-            raise TypeError('Expected integer, got {}'.format(value))
         if options == 'positive':
             if int_value < 0:
                 raise exceptions.IllegalArgumentError(
-                    'Expected positive integer, got {}'.format(value))
+                    'Expected positive integer, got {!r}'.format(value))
         elif options == 'negative':
             if int_value > 0:
                 raise exceptions.IllegalArgumentError(
-                    'Expected negative integer, got {}'.format(value))
+                    'Expected negative integer, got {!r}'.format(value))
         return str(value)
 
     def _encode_float(self, value, options):
         float_value = _cast(value, float)
-        if float_value != value:
-            raise exceptions.IllegalArgumentError(
-                    'Expected float, got {}'.format(value))
         return str(float_value)
 
     def _encode_string(self, value, options):
@@ -60,7 +55,7 @@ class AttributeType(enum.Enum):
         options = options.split(';')
         if value not in options:
             raise exceptions.IllegalArgumentError(
-                    "Expected one of {}, got {}"
+                    "Expected one of {}, got {!r}"
                     .format(', '.join(options), value))
         return str(value)
 
