@@ -3,12 +3,32 @@ from tensorlab import exceptions
 
 
 class AttributeTarget(enum.Enum):
+    """
+    Defines what the attribute is applied to, or where it is defined.
+    :see tensorlab.core.attributes.Attribute
+    """
+    Group = 'Group'
     Model = 'Model'
     Instance = 'Instance'
     Run = 'Run'
 
+    def __gt__(self, other):
+        order = self.Group, self.Model, self.Instance, self.Run
+        my_idx = order.index(self)
+        other_idx = order.index(other)
+        return my_idx < other_idx
+
+    def __lt__(self, other):
+        return AttributeTarget(other) > self
+
 
 class AttributeType(enum.Enum):
+    """
+    Defines type of attribute's values.
+    Also provides utility code for serializing and deserializing values
+    that is useful when working with databases
+    or when parsing command line arguments.
+    """
     Integer = 'Integer'
     Float = 'Float'
     String = 'String'
