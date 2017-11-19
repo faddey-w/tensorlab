@@ -1,4 +1,4 @@
-from unittest import TestCase
+from test_tensorlab import TestCase
 
 from tensorlab.core.attributeoptions import AttributeType
 from tensorlab import exceptions
