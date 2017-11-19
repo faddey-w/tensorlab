@@ -6,6 +6,9 @@ class TensorLabError(Exception):
         super(TensorLabError, self).__init__(*args)
         self.message = message
 
+    def __str__(self):
+        return str(self.message)
+
 
 class InternalError(TensorLabError):
     pass

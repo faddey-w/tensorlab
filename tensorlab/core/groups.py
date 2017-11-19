@@ -1,58 +1,24 @@
 from tensorlab import exceptions
-from .attributeoptions import AttributeType, AttributeTarget
+from . import util, base
 
 
-class GroupsStorage:
-
-    def new(self, name):
-        return Group(None, self, name=name)
-
-    def new_like(self, group):
-        return self.new(group.name)
-
-    def list(self):
-        raise NotImplementedError
-
-    def get(self, group_name):
-        raise NotImplementedError
-
-    def save(self, group):
-        raise NotImplementedError
-
-    def delete_with_content(self, group):
-        raise NotImplementedError
-
-    def list_models(self, group):
-        raise NotImplementedError
-
-    def list_attrs(self, group):
-        raise NotImplementedError
-
-    def add_or_update_attrs(self, group, attribute, *more_attributes):
-        raise NotImplementedError
-
-    def delete_attrs(self, group, attribute, *more_attributes):
-        raise NotImplementedError
-
-    def n_attribute_usages(self, group, attribute):
-        raise NotImplementedError
-
-    def get_group(self, attribute):
-        raise NotImplementedError
-
-    def count_models(self, group):
-        return len(self.list_models(group))
-
-    def count_instances(self, group):
-        return sum(
-            model.count_instances()
-            for model in self.list_models(group)
-        )
+if False:
+    import typing
 
 
 class Group:
+    """
+    Group represents a development direction of the user's project:
+    it may contain different models that implement some module or do some task.
+
+    Group fields:
+        * name - unique name given by user
+    """
 
     def __init__(self, key=None, storage=None, *, name):
+        """
+        :type name: str
+        """
         self.key = key
         self.storage = storage  # type: GroupsStorage
         self.name = name
@@ -60,49 +26,20 @@ class Group:
     def __repr__(self):
         return 'Group(name={!r})'.format(self.name)
 
-    def _check_storage(self):
-        if not self.storage:
-            raise exceptions.InvalidStateError("{} has no storage", repr(self))
+    def get_fields(self):
+        return {'name': self.name}
+
+    def __eq__(self, other):
+        if not isinstance(other, Group):
+            return False
+        return self.get_fields() == other.get_fields()
 
     def save(self):
-        self._check_storage()
+        util.check_storage(self)
         self.storage.save(self)
 
-    def get_attrs(self):
-        self._check_storage()
-        return {
-            attr.name: attr
-            for attr in self.storage.list_attrs(self)
-        }
-
-    def update_attrs(self, *attrs, **kwattrs):
-        to_delete = set()
-        for name, attr in list(kwattrs.items()):
-            if attr is None:
-                kwattrs.pop(name)
-                to_delete.add(name)
-        kwattrs = {
-            name: attr.derive(name=name) if name != attr.name else attr
-            for name, attr in kwattrs.items()
-        }
-        if to_delete:
-            attrs_to_delete = {
-                attr.name: attr
-                for attr in self.storage.list_attrs(self)
-                if attr.name in to_delete
-            }
-            if len(attrs_to_delete) != len(to_delete):
-                raise exceptions.LookupError(
-                    "Some attrs that you meant to delete are not exist: {}",
-                    ", ".format(to_delete.difference(attrs_to_delete))
-                )
-            self.storage.delete_attrs(self, *attrs_to_delete.values())
-        if attrs or kwattrs:
-            attrs = [*attrs, *kwattrs.values()]
-            self.storage.add_or_update_attrs(self, *attrs)
-            return attrs
-
     def delete(self, force=False):
+        util.check_storage(self)
         if not force:
             n_models = self.storage.count_models(self)
             if n_models > 0:
@@ -112,31 +49,78 @@ class Group:
         self.storage.delete_with_content(self)
 
 
-class Attribute:
+class GroupsStorage(base.StorageBase):
 
-    def __init__(self, key=None, storage=None, *,
-                 name, target, type, options='',
-                 default=None, nullable=False):
-        self.key = key
-        self.storage = storage  # type: GroupsStorage
-        self.name = name
-        self.target = target  # type: AttributeTarget
-        self.type = type  # type: AttributeType
-        self.options = options
-        self.default = default
-        self.nullable = nullable
+    def list(self, name_pattern=None):
+        """
+        :param name_pattern: glob pattern for filtering,
+                             supports "*" and "?" special symbols.
+        :type name_pattern: str
+        :return: list of all (matching) groups
+        :rtype: typing.List[Group]
+        """
+        raise NotImplementedError
 
-    def derive(self, **changes):
-        kwargs = self.__dict__.copy()
-        changes.setdefault('key', None)
-        kwargs.update(changes)
-        return Attribute(**kwargs)
+    def get(self, group_name):
+        """
+        :type group_name: str
+        :return: group object with given name or None if not found
+        :rtype: Group
+        """
+        raise NotImplementedError
 
-    def _check_storage(self):
-        if not self.storage:
-            raise exceptions.InvalidStateError("{} has no storage", repr(self))
+    def save(self, group):
+        """
+        Saves a new group or updates the name for existing group.
+        :type group: Group
+        """
+        raise NotImplementedError
 
-    @property
-    def group(self):
-        self._check_storage()
-        return self.storage.get_group(self)
+    def delete_with_content(self, group):
+        """
+        Deletes the group and all its models with their contents.
+        :type group: Group
+        """
+        raise NotImplementedError
+
+    def list_models(self, group, name_pattern=None):
+        """
+        Lists models within given model, filters results if pattern is given.
+        Pattern syntax - "%" symbol means "any number of characters
+                         "?" symbol means "one charanter"
+                         other symbols match as is.
+        :type group: Group
+        :type name_pattern: typing.Optional[str]
+        :rtype typing.List[tensorlab.core.models.Model]
+        """
+        raise NotImplementedError
+
+    def count_models(self, group):
+        """
+        :type group: Group
+        :returns amount of models within given group
+        :rtype int
+        """
+        return len(self.list_models(group))
+
+    def count_instances(self, group):
+        """
+        :type group: Group
+        :returns amount of instances within given group
+        :rtype int
+        """
+        return sum(
+            model.count_instances()
+            for model in self.list_models(group)
+        )
+
+    def count_runs(self, group):
+        """
+        :type group: Group
+        :returns amount of runs within given group
+        :rtype int
+        """
+        return sum(
+            model.count_runs()
+            for model in self.list_models(group)
+        )
