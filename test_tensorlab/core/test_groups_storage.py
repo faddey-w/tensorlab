@@ -3,7 +3,7 @@ from tensorlab.core import groups, models
 from tensorlab import exceptions
 
 
-class GroupStorageTests(TestCase):
+class GroupsStorageTests(TestCase):
     """
     :type groups_storage: tensorlab.core.groups.GroupsStorage
     :type models_storage: tensorlab.core.models.ModelsStorage
