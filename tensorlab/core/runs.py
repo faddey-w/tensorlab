@@ -29,7 +29,7 @@ class RunsStorage(base.StorageBase):
     def list(self, model, predicate=None):
         raise NotImplementedError
 
-    def create(self, instance, run, start_datetime, attrs):
+    def create(self, model, run, attrs):
         raise NotImplementedError
 
     def set_time(self, run, start_datetime=None, end_datetime=None):
