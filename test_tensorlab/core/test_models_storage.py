@@ -31,8 +31,19 @@ class ModelsStorageTests(TestCase):
 
         self.assertIsNotNone(m.key)
         self.assertTrue(self.is_data_path_valid(data_path))
+        self.assertEqual(self.groups_storage.list_models(None), [])
         self.assertEqual(self.groups_storage.list_models(g), [m])
+        self.assertEqual(self.models_storage.list(None), [])
         self.assertEqual(self.models_storage.list(g), [m])
+
+    def test_create_for_root_group(self):
+        m = models.Model(name='mdl')
+        data_path = self.models_storage.create(m, None, {})
+
+        self.assertIsNotNone(m.key)
+        self.assertTrue(self.is_data_path_valid(data_path))
+        self.assertEqual(self.groups_storage.list_models(None), [m])
+        self.assertEqual(self.models_storage.list(None), [])
 
     def test_get_by_name(self):
         g = groups.Group(name='grp')

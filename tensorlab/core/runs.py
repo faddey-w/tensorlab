@@ -32,7 +32,7 @@ class RunsStorage(base.StorageBase):
     def create(self, model, run, attrs):
         raise NotImplementedError
 
-    def set_time(self, run, start_datetime=None, end_datetime=None):
+    def set_time(self, run, started_at=None, finished_at=None):
         raise NotImplementedError
 
     def get_data_path(self, run):

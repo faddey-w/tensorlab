@@ -102,7 +102,7 @@ class GroupsStorage(base.StorageBase):
         Pattern syntax - "%" symbol means "any number of characters
                          "?" symbol means "one charanter"
                          other symbols match as is.
-        :type group: Group
+        :type group: typing.Optional[Group]
         :type name_pattern: typing.Optional[str]
         :type predicate: typing.Optional[tensorlab.core.attribute_predicates.Expression]
         :rtype typing.List[tensorlab.core.models.Model]
