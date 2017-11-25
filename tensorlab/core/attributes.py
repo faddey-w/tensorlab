@@ -70,8 +70,7 @@ class Attribute:
             .format(
                 self.name, self.type, self.runtime,
                 ', options={!r}'.format(self.options) if self.options else '',
-                ', default={!r}'.format
-                    (self.default) if self.default is not None else '',
+                ', default={!r}'.format(self.default) if self.default is not None else '',
                 ', nullable=True' if self.nullable else '',
             )
 
@@ -107,22 +106,34 @@ class AttributeStorage(StorageBase):
               all required attributes.
             - You can add required attributes if you don't have any objects
               that have to define values for it.
-        * Attributes cannot change their type and runtime flag.
+        * Attributes cannot change their name, type and runtime flag.
         * Attributes of enumeration type cannot remove choices if there is
           at least one value of this choice.
         * When the attribute is deleted, all its values are also dropped.
     """
 
-    def save(self, attribute, group):
+    def create(self, attribute, group):
         """
-        Creates new attribute or updates existing one.
+        Creates new attribute.
         This operation "defines" attribute on given group.
 
         This procedure must not violate the integrity rules.
         This operation changes the Python object of Attribute in-place.
 
         :type attribute: Attribute
-        :type group: tensorboard.core.groups.Group
+        :type group: typing.Optional[tensorboard.core.groups.Group]
+        :return: None
+        """
+        raise NotImplementedError
+
+    def update(self, attribute):
+        """
+        Updates existing attribute.
+
+        This procedure must not violate the integrity rules.
+        This operation changes the Python object of Attribute in-place.
+
+        :type attribute: Attribute
         :return: None
         """
         raise NotImplementedError
@@ -135,10 +146,35 @@ class AttributeStorage(StorageBase):
         """
         raise NotImplementedError
 
+    def get_attr_values_for_model(self, model):
+        """
+        :returns values of all attributes for given model, including defaults
+        :type model: tensorboard.core.models.Model
+        :rtype: dict
+        """
+        raise NotImplementedError
+
+    def get_attr_values_for_run(self, run):
+        """
+        :returns values of all attributes for given run, including defaults
+        :type run: tensorboard.core.runs.Run
+        :rtype: dict
+        """
+        raise NotImplementedError
+
     def list(self, group):
         """
         Lists all attributes that the given group defines.
-        :type group: tensorboard.core.groups.Group
+        :type group: typing.Optional[tensorboard.core.groups.Group]
+        :rtype: typing.List[Attribute]
+        """
+        raise NotImplementedError
+
+    def list_effective(self, group):
+        """
+        Lists all attributes that are visible on the given group -
+        all attributes that models/runs will use.
+        :type group: typing.Optional[tensorboard.core.groups.Group]
         :rtype: typing.List[Attribute]
         """
         raise NotImplementedError
