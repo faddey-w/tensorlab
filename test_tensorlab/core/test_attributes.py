@@ -1,5 +1,5 @@
 from ._base import StorageTestCase
-from tensorlab.core import groups, models, runs, attributes
+from tensorlab.core import attributes
 from tensorlab.core.attributeoptions import AttributeType
 from tensorlab import exceptions
 

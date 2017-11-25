@@ -23,6 +23,12 @@ class ModelsStorageTests(TestCase):
     def is_data_path_valid(self, data_dir):
         raise NotImplementedError
 
+    def reset_mocks(self):
+        raise NotImplementedError
+
+    def is_build_model_called(self):
+        raise NotImplementedError
+
     def test_create(self):
         g = groups.Group(name='grp')
         self.groups_storage.create(g, None)
@@ -31,6 +37,7 @@ class ModelsStorageTests(TestCase):
 
         self.assertIsNotNone(m.key)
         self.assertTrue(self.is_data_path_valid(data_path))
+        self.assertTrue(self.is_build_model_called())
         self.assertEqual(self.groups_storage.list_models(None), [])
         self.assertEqual(self.groups_storage.list_models(g), [m])
         self.assertEqual(self.models_storage.list(None), [])
@@ -42,6 +49,7 @@ class ModelsStorageTests(TestCase):
 
         self.assertIsNotNone(m.key)
         self.assertTrue(self.is_data_path_valid(data_path))
+        self.assertTrue(self.is_build_model_called())
         self.assertEqual(self.groups_storage.list_models(None), [m])
         self.assertEqual(self.models_storage.list(None), [])
 
@@ -63,6 +71,7 @@ class ModelsStorageTests(TestCase):
         m = models.Model(name=original_name)
         self.models_storage.create(m, g, {})
         [loaded_before] = self.models_storage.list(g)
+        self.reset_mocks()
 
         m.name = new_name
         self.models_storage.rename(m)
@@ -70,6 +79,7 @@ class ModelsStorageTests(TestCase):
 
         self.assertEqual(loaded_before.name, original_name)
         self.assertEqual(loaded_after.name, new_name)
+        self.assertFalse(self.is_build_model_called())
 
     def test_get_group(self):
         g = groups.Group(name='grp')
@@ -108,8 +118,11 @@ class ModelsStorageTests(TestCase):
         g = groups.Group(name='grp')
         self.groups_storage.create(g, None)
         m = models.Model(name='somename')
-        self.models_storage.create(m, g, {})
+        data_path = self.models_storage.create(m, g, {})
+        self.reset_mocks()
 
         self.models_storage.delete_with_content(m)
 
         self.assertEqual(self.models_storage.list(g), [])
+        self.assertFalse(self.is_data_path_valid(data_path))
+        self.assertFalse(self.is_build_model_called())
