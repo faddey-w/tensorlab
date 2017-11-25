@@ -1,4 +1,5 @@
 import unittest
+import collections
 
 
 class TestCaseMetaclass(type):
@@ -16,5 +17,8 @@ class TestCaseMetaclass(type):
 
 class TestCase(unittest.TestCase, metaclass=TestCaseMetaclass):
 
-    pass
+    def assertItemsEqual(self, collection1, collection2, msg=None):
+        cnt1 = collections.Counter(collection1)
+        cnt2 = collections.Counter(collection2)
+        self.assertEqual(dict(cnt1), dict(cnt2), msg)
 
