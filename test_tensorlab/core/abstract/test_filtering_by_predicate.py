@@ -118,7 +118,7 @@ class ModelFilteringTests(_BaseFilteringTests):
 
     def _get_filtered(self, expression_str):
         expr = parse_expression(expression_str)
-        return self.models_storage.list(None, predicate=expr)
+        return self.storage.models.list(None, predicate=expr)
 
 
 class RunFilteringTests(_BaseFilteringTests):
@@ -140,4 +140,4 @@ class RunFilteringTests(_BaseFilteringTests):
 
     def _get_filtered(self, expression_str):
         expr = parse_expression(expression_str)
-        return self.runs_storage.list(self._model, predicate=expr)
+        return self.storage.runs.list(self._model, predicate=expr)
