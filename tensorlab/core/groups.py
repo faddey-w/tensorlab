@@ -14,7 +14,7 @@ class Group:
         * name - name given by user, unique for each parent group
     """
 
-    def __init__(self, key=None, storage=None, *, name):
+    def __init__(self, key=None, storage: 'GroupsStorage'=None, *, name):
         """
         :type name: str
         """
@@ -53,7 +53,7 @@ class GroupsStorage(base.StorageBase):
     def get(self, group_name):
         """
         :param group_name: fully qualified group name, separated by slashes
-        :type group_name: str
+        :type group_name: typing.Optional[str]
         :return: group object with given name or None if not found
         :rtype: Group
         """
@@ -85,6 +85,7 @@ class GroupsStorage(base.StorageBase):
         Saves new name for group
         :type group: Group
         """
+        raise NotImplementedError
 
     def delete_with_content(self, group):
         """

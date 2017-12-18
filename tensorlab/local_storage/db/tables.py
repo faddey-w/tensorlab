@@ -1,5 +1,5 @@
 import sqlalchemy as sa
-from tensorlab.core.attributeoptions import AttributeType, AttributeTarget
+from tensorlab.core.attributeoptions import AttributeType
 
 
 _metadata = sa.MetaData()
@@ -9,7 +9,11 @@ Groups = sa.Table(
     'Groups', _metadata,
 
     sa.Column('id', sa.Integer, primary_key=True),
-    sa.Column('name', sa.String(60), unique=True),
+    sa.Column('uid', sa.String(16), unique=True),
+    sa.Column('parent_id', sa.ForeignKey('Groups.id'), nullable=True),
+    sa.Column('name', sa.String(60)),
+
+    sa.UniqueConstraint('parent_id', 'name'),
 )
 
 
@@ -20,21 +24,8 @@ Models = sa.Table(
     sa.Column('uid', sa.String(16), unique=True),
     sa.Column('group_id', sa.ForeignKey('Groups.id')),
     sa.Column('name', sa.String(60)),
-    sa.Column('type_info', sa.String(60)),
 
     sa.UniqueConstraint('group_id', 'name'),
-)
-
-
-Instances = sa.Table(
-    'Instances', _metadata,
-
-    sa.Column('id', sa.Integer, primary_key=True),
-    sa.Column('uid', sa.String(16), unique=True),
-    sa.Column('model_id', sa.ForeignKey('Models.id')),
-    sa.Column('name', sa.String(60)),
-
-    sa.UniqueConstraint('model_id', 'name'),
 )
 
 
@@ -43,9 +34,9 @@ Runs = sa.Table(
 
     sa.Column('id', sa.Integer, primary_key=True),
     sa.Column('uid', sa.String(16), unique=True),
-    sa.Column('instance_id', sa.ForeignKey('Instances.id')),
-    sa.Column('start_dt', sa.DateTime),
-    sa.Column('end_dt', sa.DateTime),
+    sa.Column('model_id', sa.ForeignKey('Models.id')),
+    sa.Column('started_at', sa.DateTime),
+    sa.Column('finished_at', sa.DateTime),
 )
 
 
@@ -55,11 +46,11 @@ Attributes = sa.Table(
     sa.Column('id', sa.Integer, primary_key=True),
     sa.Column('group_id', sa.ForeignKey('Groups.id')),
     sa.Column('name', sa.String(60)),
-    sa.Column('target', sa.Enum(AttributeTarget)),
     sa.Column('type', sa.Enum(AttributeType)),
-    sa.Column('options', sa.String(200)),
-    sa.Column('default', sa.String(60)),
+    sa.Column('options', sa.String(100)),
+    sa.Column('default', sa.String(100)),
     sa.Column('nullable', sa.Boolean),
+    sa.Column('runtime', sa.Boolean),
 
     sa.UniqueConstraint('group_id', 'name'),
 )

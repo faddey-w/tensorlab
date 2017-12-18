@@ -1,10 +1,15 @@
 from tensorlab.core import groups, models, runs
 from tensorlab import exceptions
-from ._base import StorageTestCase
+from test_tensorlab.lib import TestCase
 
 
-class RunsStorageTests(StorageTestCase):
+class RunsStorageTests(TestCase):
+    """
+    :type storage: tensorlab.core.facade.TensorLabStorage
+    """
     __abstract_test__ = True
+
+    storage = None
 
     def test_constructor(self):
         run = runs.Run(storage=self.storage.runs,
@@ -12,7 +17,7 @@ class RunsStorageTests(StorageTestCase):
         self.assertIsNone(run.key)
         self.assertEqual(run.started_at, 10)
         self.assertEqual(run.finished_at, None)
-        self.assertIs(run.storage, self.storage.models)
+        self.assertIs(run.storage, self.storage.runs)
 
     def is_data_path_valid(self, data_path):
         raise NotImplementedError

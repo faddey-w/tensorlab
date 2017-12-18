@@ -3,7 +3,7 @@ from tensorlab.core import base
 
 class Run:
 
-    def __init__(self, key=None, storage=None, *, started_at, finished_at):
+    def __init__(self, key=None, storage: 'RunsStorage'=None, *, started_at, finished_at):
         self.key = key
         self.storage = storage
         self.started_at = started_at

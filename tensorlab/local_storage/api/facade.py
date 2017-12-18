@@ -1,18 +1,20 @@
 from tensorlab import exceptions
+from tensorlab.core.facade import TensorLabStorage
 from .. import files
-from ..files.config import Config
 
 
-class TensorLabStorage:
+class LocalStorage(TensorLabStorage):
 
-    def __init__(self, root_dir, implementation=None):
+    def __init__(self, root_dir, user_project, log_stream):
+        """
+        :type root_dir: str
+        :type user_project: tensorlab.core.user_project.UserProject
+        """
         self._root = root_dir
+        self._project = user_project
         self._is_open = False
-        self._db = None
-        self._config = Config(files.get_config_path(self._root))
-        self._config.load()
-        self._groups = None
-        self._get_implementation = implementation or DefaultImplementation
+        self._impl = None
+        self.log_stream = log_stream
 
     @property
     def is_opened(self):
@@ -23,19 +25,11 @@ class TensorLabStorage:
         return self._root
 
     @property
-    def config(self):
+    def project(self):
         """
-        :rtype: tensorlab.storage.files.Config
+        :rtype: tensorlab.core.user_project.UserProject
         """
-        return self._config
-
-    @property
-    def groups(self):
-        """
-        :rtype: tensorlab.core.groups.GroupsStorage
-        """
-        self._do_init()
-        return self._groups
+        return self._project
 
     def Open(self):
         if self.is_opened:
@@ -53,26 +47,31 @@ class TensorLabStorage:
         if not files.create_storage_directory(self._root):
             _error("Cannot create storage at {}", self._root)
         self._is_open = True
-        self._do_init()
+        self._get_impl()
         return self
 
-    def _do_init(self):
-        if self._db is None:
+    def _get_impl(self):
+        if self._impl is None:
             if not self._is_open:
                 raise _error("Storage is not opened")
-            impl = self._get_implementation(self, self._root)
-            self._db = impl.db
-            self._groups = impl.groups_storage
+            self._impl = self._create_impl()
+        return self._impl
+
+    def _create_impl(self):
+        return DefaultImplementation(self, self._root)
 
 
 class DefaultImplementation:
 
     def __init__(self, storage, root_dir):
         from .. import db, files
-        from .groups_storage import GroupsStorage
+        from . import groups, models, runs, attributes
         self.db = db.connection.init_db_engine(files.get_db_path(root_dir))
         db.tables.initialize_db(self.db)
-        self.groups_storage = GroupsStorage(self.db, storage)
+        self.groups = groups.LocalGroupsStorage(self.db, storage)
+        self.models = models.LocalModelsStorage(self.db, storage, storage.log_stream)
+        self.runs = runs.LocalRunsStorage(self.db, storage, storage.log_stream)
+        self.attributes = attributes.LocalAttributeStorage(self.db, storage)
 
 
 def _error(msg, *args, **kwargs):

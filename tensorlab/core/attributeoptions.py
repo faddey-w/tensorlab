@@ -23,11 +23,15 @@ class AttributeType(enum.Enum):
             return options == ''
 
     def encode(self, value, options):
+        if value is None:
+            return None
         encoder_name = '_encode_'+self.name.lower()
         encoder = getattr(self, encoder_name)
         return encoder(value, options)
 
     def decode(self, string, options):
+        if string is None:
+            return None
         decoder_name = '_decode_'+self.name.lower()
         decoder = getattr(self, decoder_name)
         return decoder(string, options)

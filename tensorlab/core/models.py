@@ -5,7 +5,7 @@ from . import util
 
 class Model:
 
-    def __init__(self, key=None, storage: ModelsStorage=None, *, name):
+    def __init__(self, key=None, storage: 'ModelsStorage'=None, *, name):
         self.key = key
         self.storage = storage
         self.name = name

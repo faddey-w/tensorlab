@@ -17,7 +17,7 @@ class ModelsStorageTests(StorageTestCase):
     def reset_mocks(self):
         raise NotImplementedError
 
-    def is_build_model_called(self):
+    def is_build_model_called(self, attributes=None):
         raise NotImplementedError
 
     def test_create(self):
@@ -28,7 +28,7 @@ class ModelsStorageTests(StorageTestCase):
 
         self.assertIsNotNone(m.key)
         self.assertTrue(self.is_data_path_valid(data_path))
-        self.assertTrue(self.is_build_model_called())
+        self.assertTrue(self.is_build_model_called({}))
         self.assertEqual(self.storage.groups.list_models(None), [])
         self.assertEqual(self.storage.groups.list_models(g), [m])
         self.assertEqual(self.storage.models.list(None), [])
@@ -40,7 +40,7 @@ class ModelsStorageTests(StorageTestCase):
 
         self.assertIsNotNone(m.key)
         self.assertTrue(self.is_data_path_valid(data_path))
-        self.assertTrue(self.is_build_model_called())
+        self.assertTrue(self.is_build_model_called({}))
         self.assertEqual(self.storage.groups.list_models(None), [m])
         self.assertEqual(self.storage.models.list(None), [])
 

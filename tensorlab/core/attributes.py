@@ -38,7 +38,7 @@ class Attribute:
     is not nullable and has no default value.
     """
 
-    def __init__(self, key=None, storage=None, *,
+    def __init__(self, key=None, storage: 'AttributeStorage'=None, *,
                  name, type, runtime, options='',
                  default=None, nullable=False):
         """
@@ -64,6 +64,13 @@ class Attribute:
         kwargs['storage'] = self.storage
         kwargs.update(changes)
         return Attribute(**kwargs)
+
+    def get_default(self):
+        if self.default is not None:
+            return self.decode_value(self.default)
+
+    def decode_value(self, value_str):
+        return self.type.decode(value_str, self.options)
 
     def __repr__(self):
         return 'Attribute(name={!r}, type={}, runtime={}{}{}{})'\

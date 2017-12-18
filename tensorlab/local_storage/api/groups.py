@@ -1,41 +1,108 @@
 import sqlalchemy as sa
+from sqlalchemy import exc as sa_exc
 from tensorlab import exceptions
 from tensorlab.core.attributeoptions import AttributeType
 from tensorlab.core import groups
-from tensorlab.storage.db import tables as _t, utils
+from tensorlab.local_storage.db import tables as _t, utils
+from . import _base
 
 
-class GroupsStorage(groups.GroupsStorage):
+class LocalGroupsStorage(groups.GroupsStorage, _base.LocalStorageBase):
 
     def __init__(self, db, storage):
+        """
+        :type storage: tensorlab.local_storage.api.facade.LocalStorage
+        """
         self._db = db
         self._storage = storage
 
-    def list(self):
-        return utils.read_many(self._db, _t.Groups.select(), self._row_to_group)
+        _root = utils.read_one(
+            self._db, _t.Groups, _t.Groups.c.id == _t.Groups.c.parent_id)
+        if _root is None:
+            self._create_root()
+        else:
+            self._root = self._row_to_group(_root)
+
+    def _create_root(self):
+        uid = utils.make_uid()
+        root = groups.Group(name='')
+        ins_q = _t.Groups.insert().values(
+            name=root.name, uid=uid, parent_id=None)
+        ret = self._db.execute(ins_q)
+        root.key = self._make_group_key(
+            ret.inserted_primary_key[0], uid,
+            ret.inserted_primary_key[0], root.name,
+        )
+        upd_q = _t.Groups.update() \
+            .where(_t.Groups.c.id == root.key['id']) \
+            .values(parent_id=root.key['id'])
+        self._db.execute(upd_q)
+        self._root = root
+
+    def get_synced(self, group):
+        return set(utils.get_synced_fields(group))
+
+    def get_dirty(self, group):
+        return set(utils.get_dirty_fields(group))
+
+    def reset(self, group):
+        utils.reset_fields(group)
+
+    def create(self, group, parent_group):
+        uid = utils.make_uid()
+        parent_group = parent_group or self._root
+        parent_id = utils.get_key(parent_group)['id']
+        ins_q = _t.Groups.insert().values(
+            name=group.name, uid=uid, parent_id=parent_id)
+        try:
+            ret = self._db.execute(ins_q)
+        except sa_exc.IntegrityError:
+            raise exceptions.InvalidStateError(
+                'Cannot create two subgroups with the same name',
+                group)
+        group.key = self._make_group_key(
+            ret.inserted_primary_key[0], uid, parent_id, group.name,
+        )
+        group.storage = self
+
+    def list(self, parent_group, name_pattern=None):
+        q = _t.Groups.select().order_by('id')
+        if name_pattern:
+            name_pattern = name_pattern.replace('*', '%').replace('?', '_')
+            q = q.where(_t.Groups.c.name.like(name_pattern))
+        parent_group = parent_group or self._root
+        parent_id = utils.get_key(parent_group)['id']
+        q = q.where(_t.Groups.c.parent_id == parent_id)
+        q = q.where(_t.Groups.c.id != self._root.key['id'])
+        return utils.read_many(self._db, q, self._row_to_group)
 
     def get(self, group_name):
-        row = utils.read_one(self._db, _t.Groups, name=group_name)
-        if row is None:
-            raise exceptions.LookupError("Group named {!r} not found".format(group_name))
-        return self._row_to_group(row)
+        if group_name is None:
+            return self._root
+        name_parts = group_name.split('/')
+        data = None
+        for i, name in enumerate(name_parts):
+            data = self._get(name, data)
+            if data is None:
+                not_found = '/'.join(name_parts[:i+1])
+                raise exceptions.LookupError(
+                    "Group named {!r} not found".format(not_found))
+        return self._row_to_group(data)
 
-    def save(self, group):
-        if group.key:
-            dirty = _get_dirty(group)
-            if dirty:
-                upd_q = _t.Groups.update()\
-                    .where(_t.Groups.c.id == group.key['id'])\
-                    .values(**dirty)
-                self._db.execute(upd_q)
-                _update_from_dict(group, dirty)
-        else:
-            ins_q = _t.Groups.insert().values(name=group.name)
-            ret = self._db.execute(ins_q)
-            group.key = _group_key_from_row({
-                'id': ret.inserted_primary_key[0],
-                'name': group.name,
-            })
+    def _get(self, name, parent_key):
+        row = utils.read_one(
+            self._db, _t.Groups,
+            _t.Groups.c.id != self._root.key['id'],
+            name=name,
+            parent_id=(parent_key or self._root.key)['id']
+        )
+        return row
+
+    def rename(self, group):
+        if utils.get_key(group)['id'] == self._root.key['id']:
+            raise exceptions.IllegalArgumentError("Cannot rename root group")
+        dirty = utils.get_dirty_fields(group)
+        utils.update_obj(self._db, group, _t.Groups, dirty)
 
     def add_or_update_attrs(self, group, attribute, *more_attributes):
         if not group.key:
@@ -117,14 +184,18 @@ class GroupsStorage(groups.GroupsStorage):
             raise exceptions.InternalError("Group #{} not found".format(group_id))
         return self._row_to_group(row)
 
-    def list_models(self, group):
-        return []
-        # return self._storage.models.list(group)
+    def list_models(self, group, name_pattern=None, predicate=None):
+        return self._storage.models.list(group or self._root,
+                                         name_pattern, predicate)
 
-    def list_attrs(self, group):
+    def list_attrs(self, group, type=None, target=None):
+        query = _t.Attributes.select().where(_t.Attributes.c.group_id == group.key['id'])
+        if type is not None:
+            query = query.where(_t.Attributes.c.type == type)
+        if target is not None:
+            query = query.where(_t.Attributes.c.target == target)
         return utils.read_many(
-            self._db,
-            _t.Attributes.select().where(_t.Attributes.c.group_id == group.key['id']),
+            self._db, query,
             self._row_to_attr
         )
 
@@ -159,24 +230,9 @@ class GroupsStorage(groups.GroupsStorage):
                 results.append(0)
         return results
 
-    def _row_to_group(self, row):
-        key = _group_key_from_row(row)
-        return groups.Group(key, self, **key['orig_fields'])
-
     def _row_to_attr(self, row):
         key = _attr_key_from_row(row)
         return groups.Attribute(key, self, **key['orig_fields'])
-
-
-def _group_args_from_row(row):
-    return {'name': row['name']}
-
-
-def _group_key_from_row(row):
-    return {
-        'id': row['id'],
-        'orig_fields': _group_args_from_row(row)
-    }
 
 
 def _attr_args_from_row(row):
@@ -195,17 +251,3 @@ def _attr_key_from_row(row):
         'group_id': row['group_id'],
         'orig_fields': _attr_args_from_row(row)
     }
-
-
-def _get_dirty(obj):
-    return {
-        field: getattr(obj, field)
-        for field, orig_value in obj.key['orig_fields'].items()
-        if orig_value != getattr(obj, field)
-    }
-
-
-def _update_from_dict(group, fields):
-    group.key['orig_fields'].update(fields)
-    for fld, val in fields.items():
-        setattr(group, fld, val)
